@@ -61,7 +61,8 @@ export default async function handler(request, response) {
           Accept: 'application/json',
           'Content-Type': 'application/json',
           Origin: SITE_ORIGIN,
-          Referer: `${SITE_ORIGIN}/`
+          Referer: `${SITE_ORIGIN}/`,
+          'User-Agent': 'Mozilla/5.0 (compatible; ImsamMetaMath/1.0; +https://landing-page-blue-seven-65.vercel.app/)'
         },
         body: JSON.stringify({
           _subject: `[아임샘 메타수학] ${studentName} 학생 상담 신청`,
