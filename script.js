@@ -26,7 +26,9 @@ form.addEventListener('submit', async (event) => {
 
   try {
     const formData = new FormData(form);
-    const response = await fetch('/', {
+    const isVercel = window.location.hostname.endsWith('.vercel.app');
+    const submitUrl = isVercel ? '/api/consult' : '/';
+    const response = await fetch(submitUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams(formData).toString()
