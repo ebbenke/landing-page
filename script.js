@@ -26,15 +26,33 @@ form.addEventListener('submit', async (event) => {
 
   try {
     const formData = new FormData(form);
-    const isVercel = window.location.hostname.endsWith('.vercel.app');
-    const submitUrl = isVercel ? '/api/consult' : '/';
-    const response = await fetch(submitUrl, {
+    if (formData.get('bot-field')) {
+      success.classList.add('show');
+      return;
+    }
+
+    const response = await fetch('https://formsubmit.co/ajax/ebbenke@kakao.com', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(formData).toString()
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        _subject: `[아임샘 메타수학] ${formData.get('studentName')} 학생 상담 신청`,
+        _template: 'table',
+        _captcha: 'false',
+        '학생 이름': formData.get('studentName'),
+        '연락처': formData.get('phone'),
+        '자녀 학년': formData.get('grade'),
+        '가장 큰 고민': formData.get('concern'),
+        '개인정보 수집 동의': formData.get('privacyConsent')
+      })
     });
 
-    if (!response.ok) throw new Error('Form submission failed');
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.success !== 'true') {
+      throw new Error(result.message || 'Form submission failed');
+    }
     success.classList.add('show');
   } catch (error) {
     errorMessage.classList.add('show');
