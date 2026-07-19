@@ -1,4 +1,5 @@
 const FORMSUBMIT_AJAX_URL = 'https://formsubmit.co/ajax/';
+const SITE_ORIGIN = 'https://landing-page-blue-seven-65.vercel.app';
 
 function toSearchParams(body) {
   if (typeof body === 'string') return new URLSearchParams(body);
@@ -53,12 +54,14 @@ export default async function handler(request, response) {
 
   try {
     const formSubmitResponse = await fetch(
-      `${FORMSUBMIT_AJAX_URL}${encodeURIComponent(recipient)}`,
+      `${FORMSUBMIT_AJAX_URL}${recipient}`,
       {
         method: 'POST',
         headers: {
           Accept: 'application/json',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Origin: SITE_ORIGIN,
+          Referer: `${SITE_ORIGIN}/`
         },
         body: JSON.stringify({
           _subject: `[아임샘 메타수학] ${studentName} 학생 상담 신청`,
