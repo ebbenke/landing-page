@@ -1,58 +1,4 @@
-const NETLIFY_FORM_URL = process.env.NETLIFY_FORM_URL || 'https://darling-dusk-d93a37.netlify.app/';
-
-function escapeHtml(value) {
-  return String(value || '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-async function sendWithResend(params) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const recipient = process.env.CONSULTATION_TO_EMAIL;
-  if (!apiKey || !recipient) return false;
-
-  const studentName = params.get('studentName').replace(/[\r\n]/g, ' ').slice(0, 60);
-  const submittedAt = new Intl.DateTimeFormat('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    dateStyle: 'full',
-    timeStyle: 'medium'
-  }).format(new Date());
-
-  const emailResponse = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from: process.env.RESEND_FROM_EMAIL || '아임샘 메타수학 <onboarding@resend.dev>',
-      to: [recipient],
-      subject: `[아임샘 메타수학] ${studentName} 학생 상담 신청`,
-      html: `
-        <div style="font-family:Arial,'Apple SD Gothic Neo',sans-serif;max-width:620px;margin:auto;color:#18303d">
-          <h2 style="color:#e57145">새로운 학습 상담 신청이 도착했습니다.</h2>
-          <table style="width:100%;border-collapse:collapse">
-            <tr><th style="padding:12px;text-align:left;background:#f7f2e9;border:1px solid #e2ddd3">학생 이름</th><td style="padding:12px;border:1px solid #e2ddd3">${escapeHtml(params.get('studentName'))}</td></tr>
-            <tr><th style="padding:12px;text-align:left;background:#f7f2e9;border:1px solid #e2ddd3">연락처</th><td style="padding:12px;border:1px solid #e2ddd3">${escapeHtml(params.get('phone'))}</td></tr>
-            <tr><th style="padding:12px;text-align:left;background:#f7f2e9;border:1px solid #e2ddd3">자녀 학년</th><td style="padding:12px;border:1px solid #e2ddd3">${escapeHtml(params.get('grade'))}</td></tr>
-            <tr><th style="padding:12px;text-align:left;background:#f7f2e9;border:1px solid #e2ddd3">가장 큰 고민</th><td style="padding:12px;border:1px solid #e2ddd3">${escapeHtml(params.get('concern'))}</td></tr>
-            <tr><th style="padding:12px;text-align:left;background:#f7f2e9;border:1px solid #e2ddd3">신청 시각</th><td style="padding:12px;border:1px solid #e2ddd3">${escapeHtml(submittedAt)}</td></tr>
-          </table>
-          <p style="margin-top:20px;color:#6f7a7e;font-size:12px">Vercel 상담 신청 페이지에서 자동 발송된 메일입니다.</p>
-        </div>`
-    })
-  });
-
-  if (!emailResponse.ok) {
-    const detail = await emailResponse.text();
-    throw new Error(`Resend returned ${emailResponse.status}: ${detail}`);
-  }
-
-  return true;
-}
+const FORMSUBMIT_AJAX_URL = 'https://formsubmit.co/ajax/';
 
 function toSearchParams(body) {
   if (typeof body === 'string') return new URLSearchParams(body);
@@ -68,50 +14,73 @@ function toSearchParams(body) {
   return params;
 }
 
+function clean(value, maxLength) {
+  return String(value || '').trim().replace(/[\r\n]+/g, ' ').slice(0, maxLength);
+}
+
 export default async function handler(request, response) {
   if (request.method !== 'POST') {
     response.setHeader('Allow', 'POST');
     return response.status(405).json({ ok: false, message: 'Method not allowed' });
   }
 
-  const params = toSearchParams(request.body);
-  const requiredFields = ['studentName', 'phone', 'grade', 'concern', 'privacyConsent'];
-  const hasAllFields = requiredFields.every((field) => params.get(field)?.trim());
-
-  if (!hasAllFields) {
-    return response.status(400).json({ ok: false, message: 'Required fields are missing' });
+  const recipient = process.env.CONSULTATION_TO_EMAIL;
+  if (!recipient) {
+    console.error('CONSULTATION_TO_EMAIL is not configured.');
+    return response.status(500).json({ ok: false, message: 'Email delivery is not configured' });
   }
 
+  const params = toSearchParams(request.body);
   if (params.get('bot-field')) {
     return response.status(200).json({ ok: true });
   }
 
-  params.set('form-name', 'parent-consultation');
-  // The current Netlify deployment still defines the legacy `parentName`
-  // field. Mirror the student name so Netlify recognizes the submission
-  // until the updated form is redeployed there.
-  params.set('parentName', params.get('studentName'));
-  params.set('subject', params.get('subject') || '아임샘 메타수학 새 상담 신청');
+  const studentName = clean(params.get('studentName'), 60);
+  const phone = clean(params.get('phone'), 30);
+  const grade = clean(params.get('grade'), 40);
+  const concern = clean(params.get('concern'), 2000);
+  const privacyConsent = clean(params.get('privacyConsent'), 20);
+
+  if (!studentName || !phone || !grade || !concern || !privacyConsent) {
+    return response.status(400).json({ ok: false, message: 'Required fields are missing' });
+  }
+
+  const submittedAt = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    dateStyle: 'full',
+    timeStyle: 'medium'
+  }).format(new Date());
 
   try {
-    const sentDirectly = await sendWithResend(params);
-    if (sentDirectly) {
-      return response.status(200).json({ ok: true, delivery: 'vercel-email' });
+    const formSubmitResponse = await fetch(
+      `${FORMSUBMIT_AJAX_URL}${encodeURIComponent(recipient)}`,
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          _subject: `[아임샘 메타수학] ${studentName} 학생 상담 신청`,
+          _template: 'table',
+          _captcha: 'false',
+          '학생 이름': studentName,
+          '연락처': phone,
+          '자녀 학년': grade,
+          '가장 큰 고민': concern,
+          '신청 시각': submittedAt
+        })
+      }
+    );
+
+    const result = await formSubmitResponse.json().catch(() => ({}));
+    if (!formSubmitResponse.ok || result.success === 'false' || result.success === false) {
+      throw new Error(`FormSubmit returned ${formSubmitResponse.status}: ${JSON.stringify(result)}`);
     }
 
-    const netlifyResponse = await fetch(NETLIFY_FORM_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString()
-    });
-
-    if (!netlifyResponse.ok) {
-      throw new Error(`Netlify form returned ${netlifyResponse.status}`);
-    }
-
-    return response.status(200).json({ ok: true, delivery: 'netlify-fallback' });
+    return response.status(200).json({ ok: true, delivery: 'formsubmit-email' });
   } catch (error) {
-    console.error('Consultation form forwarding failed:', error);
+    console.error('Consultation email delivery failed:', error);
     return response.status(502).json({ ok: false, message: 'Unable to send consultation request' });
   }
 }
