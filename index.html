@@ -178,9 +178,10 @@
       </div>
       <form class="consult-form reveal" id="consultForm" name="parent-consultation" method="POST" action="/" data-netlify="true" netlify-honeypot="bot-field">
         <input type="hidden" name="form-name" value="parent-consultation" />
+        <input type="hidden" name="subject" data-remove-prefix value="아임샘 메타수학 새 상담 신청 (%{submissionId})" />
         <p class="bot-field" aria-hidden="true"><label>작성하지 마세요 <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
         <div class="form-header"><span>01</span><div><h3>우리 아이 학습 상담 신청</h3><p>남겨주신 연락처로 상담 일정을 안내드립니다.</p></div></div>
-        <label>학부모님 성함<input name="parentName" type="text" placeholder="성함을 입력해주세요" required /></label>
+        <label>학생 이름<input name="studentName" type="text" placeholder="학생 이름을 입력해주세요" required /></label>
         <label>연락처<input name="phone" type="tel" placeholder="010-0000-0000" required /></label>
         <fieldset><legend>자녀 학년</legend><div class="chip-group"><label><input type="radio" name="grade" value="초등 저학년" required><span>초등 1–3</span></label><label><input type="radio" name="grade" value="초등 고학년"><span>초등 4–6</span></label><label><input type="radio" name="grade" value="중학생"><span>중학생</span></label></div></fieldset>
         <label>가장 큰 고민<select name="concern" required><option value="">선택해주세요</option><option>같은 유형을 반복해서 틀려요</option><option>열심히 하지만 점수가 오르지 않아요</option><option>수학 자신감이 많이 낮아졌어요</option><option>선행과 복습의 우선순위가 고민이에요</option><option>첫 수학학원 선택이 고민이에요</option></select></label>
