@@ -33,6 +33,10 @@ export default async function handler(request, response) {
   }
 
   params.set('form-name', 'parent-consultation');
+  // The current Netlify deployment still defines the legacy `parentName`
+  // field. Mirror the student name so Netlify recognizes the submission
+  // until the updated form is redeployed there.
+  params.set('parentName', params.get('studentName'));
   params.set('subject', params.get('subject') || '아임샘 메타수학 새 상담 신청');
 
   try {
